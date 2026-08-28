@@ -4,8 +4,10 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.InsetDrawable;
 import android.graphics.drawable.ShapeDrawable;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import me.vkryl.android.animator.BoolAnimator;
@@ -86,6 +88,67 @@ public final class MainTabsUiHelper {
     /** В M3 и iOS-стиле панель растянута на всю ширину. */
     public static int getTabsViewWidth() {
         return isMaterial3NavigationBar() || isIosNavigationBar() ? LayoutHelper.MATCH_PARENT : MainTabsHelper.getTabsViewWidth();
+    }
+
+    /** Видимый зазор между телом капсулы и телом кнопки поиска. */
+    private static final float SEARCH_BUTTON_GAP = 8f;
+
+    /** Круглая кнопка поиска справа от капсулы. В M3 панель во всю ширину — места рядом нет. */
+    public static boolean isSearchButtonVisible() {
+        return AppearanceConfig.bottomSearchButton()
+                && !isMaterial3NavigationBar()
+                && MainTabsLayout.isBottomNavigationVisible();
+    }
+
+    /**
+     * Сколько места по ширине забирает кнопка вместе с зазором.
+     *
+     * Тела капсулы и кнопки утоплены в своих вьюхах на {@link #getBackgroundInset()},
+     * поэтому вьюхи кладутся вплотную, а видимый зазор набирается из этих отступов:
+     * резерв = ширина вьюхи кнопки − 2 × отступ + зазор.
+     */
+    private static float getSearchButtonReserveDp() {
+        return MainTabsHelper.getMainTabsHeight() + 0.668f + SEARCH_BUTTON_GAP;
+    }
+
+    /**
+     * Кнопка занимает такой же бокс, что и капсула по высоте: её круг совпадает
+     * с капсулой по диаметру, низу и вертикальному центру.
+     */
+    public static FrameLayout.LayoutParams createSearchButtonLayoutParams() {
+        final int box = getTabsViewHeightDp();
+        if (isTabsFillWidth()) {
+            return LayoutHelper.createFrame(box, box, Gravity.RIGHT | Gravity.BOTTOM);
+        }
+        // Капсула фиксированной ширины: её левый край и правый край кнопки остаются
+        // там же, где были края одной капсулы, — группа занимает прежнее место.
+        final FrameLayout.LayoutParams lp = LayoutHelper.createFrame(box, box, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
+        lp.leftMargin = AndroidUtilities.dp((MainTabsHelper.getTabsViewWidth() - box) / 2f);
+        return lp;
+    }
+
+    /** Параметры капсулы; с кнопкой поиска она сужается и уступает ей место справа. */
+    public static FrameLayout.LayoutParams createTabsLayoutParams(boolean withSearchButton) {
+        final int height = getTabsViewHeightDp();
+        if (!withSearchButton) {
+            return LayoutHelper.createFrame(getTabsViewWidth(), height, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
+        }
+        final float reserve = getSearchButtonReserveDp();
+        if (isTabsFillWidth()) {
+            final FrameLayout.LayoutParams lp = LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, height, Gravity.LEFT | Gravity.BOTTOM);
+            lp.rightMargin = AndroidUtilities.dp(reserve);
+            return lp;
+        }
+        // Капсула фиксированной ширины: на 344dp (четыре вкладки) кнопка рядом уже
+        // не влезает, поэтому панель ужимается на резерв, а не просто съезжает влево.
+        final FrameLayout.LayoutParams lp = LayoutHelper.createFrame(
+                MainTabsHelper.getTabsViewWidth() - reserve, height, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
+        lp.rightMargin = AndroidUtilities.dp(reserve / 2f);
+        return lp;
+    }
+
+    private static boolean isTabsFillWidth() {
+        return isMaterial3NavigationBar() || isIosNavigationBar();
     }
 
     /** Сдвиг кнопки «написать» над панелью: в M3 всегда 64. */

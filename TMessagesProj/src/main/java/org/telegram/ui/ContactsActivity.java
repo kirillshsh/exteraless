@@ -344,13 +344,7 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
                     listViewAdapter.setSortType(sortByName ? 1 : 2, false);
                     sortItem.setIcon(sortByName ? R.drawable.msg_contacts_time : R.drawable.msg_contacts_name);
                 } else if (id == search_button) {
-                    listView.smoothScrollToPosition(0);
-//                    animatorSearchFieldVisible.setValue(true, true);
-//                    animatorSearchFieldHeight.animateTo(dp(DialogsActivity.SEARCH_FIELD_HEIGHT));
-                    AndroidUtilities.doOnPreDraw(searchField.editText, () -> {
-                        searchField.editText.requestFocus();
-                        AndroidUtilities.showKeyboard(searchField.editText);
-                    });
+                    onParentSearchClicked();
                 }
             }
         });
@@ -1223,6 +1217,20 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
                 finishFragment();
             }
         }
+    }
+
+    /** Лупа в шапке и в нижней панели открывают одно и то же поле поиска. */
+    @Override
+    public boolean onParentSearchClicked() {
+        if (searchField == null || listView == null) {
+            return false;
+        }
+        listView.smoothScrollToPosition(0);
+        AndroidUtilities.doOnPreDraw(searchField.editText, () -> {
+            searchField.editText.requestFocus();
+            AndroidUtilities.showKeyboard(searchField.editText);
+        });
+        return true;
     }
 
     @Override

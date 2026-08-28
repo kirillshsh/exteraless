@@ -334,6 +334,7 @@ public final class EtgBackup {
         bool(list, "newChatHeaderStyle", AppearanceConfig.newChatHeaderStyle);
         bool(list, "newNavigationBarStyle", AppearanceConfig.newNavigationBarStyle);
         bool(list, "iosNavigationBarStyle", AppearanceConfig.iosNavigationBarStyle);
+        bool(list, "bottomSearchButton", AppearanceConfig.bottomSearchButton);
         bool(list, "iosFirstFolderOnTabTap", AppearanceConfig.iosFirstFolderOnTabTap);
         bool(list, "iosBackCounter", AppearanceConfig.iosBackCounter);
         bool(list, "useSystemFonts", NekoConfig.typeface);

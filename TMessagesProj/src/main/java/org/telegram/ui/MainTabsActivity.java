@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
 import android.graphics.RectF;
 import android.graphics.drawable.ShapeDrawable;
 import android.os.Build;
@@ -27,6 +28,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -77,6 +79,7 @@ import org.telegram.ui.Components.HintsController;
 import org.telegram.ui.Components.ItemOptions;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.Premium.LimitReachedBottomSheet;
+import org.telegram.ui.Components.ScaleStateListAnimator;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.BlurredBackgroundWithFadeDrawable;
 import org.telegram.ui.Components.blur3.RenderNodeWithHash;
@@ -176,6 +179,8 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     private FrameLayout tabsViewWrapper;
     private MainTabsLayout tabsView;
     private BlurredBackgroundDrawable tabsViewBackground;
+    private ImageView searchButton;
+    private BlurredBackgroundDrawable searchButtonBackground;
     private View fadeView;
     private boolean lastHideContacts = NaConfig.INSTANCE.getMainTabsHideContacts().Bool();
     private boolean lastHideCallsSettings = MainTabsHelper.isCallsOrSettingsTabHidden();
@@ -460,11 +465,33 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         contentView.addView(fadeView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 0, Gravity.BOTTOM));
 
+        // Вьюха пересобирается при смене настроек, поэтому ссылки на прежнюю кнопку сбрасываются.
+        searchButton = null;
+        searchButtonBackground = null;
+        final boolean hasSearchButton = MainTabsUiHelper.isSearchButtonVisible();
+        if (hasSearchButton) {
+            searchButton = new ImageView(context);
+            searchButton.setScaleType(ImageView.ScaleType.CENTER);
+            searchButton.setImageResource(R.drawable.outline_header_search);
+            searchButton.setContentDescription(getString(R.string.Search));
+            ScaleStateListAnimator.apply(searchButton);
+            searchButton.setOnClickListener(v -> openSearchInCurrentTab());
+
+            searchButtonBackground = iBlur3FactoryGlass.create(searchButton, BlurredBackgroundProviderImpl.mainTabs(resourceProvider));
+            searchButtonBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
+            searchButtonBackground.setPadding(MainTabsUiHelper.getBackgroundInset());
+            searchButton.setBackground(searchButtonBackground);
+            updateSearchButtonColors();
+        }
+
         tabsViewWrapper = new FrameLayout(context);
         tabsViewWrapper.setOnClickListener(v -> {});
         // В M3 панель во всю ширину,
         // высота досчитывается вместе с нижним системным отступом в applyTabsBottomInset
-        tabsViewWrapper.addView(tabsView, LayoutHelper.createFrame(MainTabsUiHelper.getTabsViewWidth(), MainTabsUiHelper.getTabsViewHeightDp(), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
+        tabsViewWrapper.addView(tabsView, MainTabsUiHelper.createTabsLayoutParams(hasSearchButton));
+        if (hasSearchButton) {
+            tabsViewWrapper.addView(searchButton, MainTabsUiHelper.createSearchButtonLayoutParams());
+        }
         tabsViewWrapper.setClipToPadding(false);
         contentView.addView(tabsViewWrapper, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM));
 
@@ -1039,6 +1066,32 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         default void setParentTabsGlassInvalidationCallback(Runnable callback) {
 
         }
+
+        /** Кнопка поиска в нижней панели: вкладка открывает свой поиск и возвращает true. */
+        default boolean onParentSearchClicked() {
+            return false;
+        }
+    }
+
+    /**
+     * Вкладки без своего поиска (профиль, звонки) отдают лупу чатам: там поиск глобальный.
+     * Открывать его сразу нельзя — сначала должно доехать перелистывание.
+     */
+    private void openSearchInCurrentTab() {
+        final BaseFragment fragment = getCurrentVisibleFragment();
+        if (fragment instanceof TabFragmentDelegate && ((TabFragmentDelegate) fragment).onParentSearchClicked()) {
+            return;
+        }
+        final int position = getPositionChats();
+        if (viewPager.getCurrentPosition() != position) {
+            selectTab(position, true);
+            viewPager.scrollToPosition(position);
+        }
+        AndroidUtilities.runOnUIThread(() -> {
+            if (dialogsActivity != null) {
+                dialogsActivity.onParentSearchClicked();
+            }
+        }, 250);
     }
 
     private <T extends BaseFragment> T prepareTabFragment(T fragment) {
@@ -1264,6 +1317,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         if (tabsView == null) return;
         if (NaConfig.INSTANCE.getHideBottomNavigationBar().Bool()) {
             tabsView.setVisibility(View.GONE);
+            if (searchButton != null) {
+                searchButton.setVisibility(View.GONE);
+            }
             return;
         }
         final boolean isUpdateLayoutVisible = updateLayoutWrapper.isUpdateLayoutVisible();
@@ -1279,6 +1335,10 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         tabsView.setEnabled(factor > 1);
         tabsView.setAlpha(factor);
         tabsView.setVisibility(factor > 0 ? View.VISIBLE : View.GONE);
+        if (searchButton != null) {
+            searchButton.setAlpha(factor);
+            searchButton.setVisibility(factor > 0 ? View.VISIBLE : View.GONE);
+        }
     }
 
     private void checkUi_callTabVisible(boolean callTabsVisible, boolean animated) {
@@ -1439,6 +1499,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         if (tabsViewWrapper != null) {
             tabsViewWrapper.invalidate();
         }
+        if (searchButton != null) {
+            searchButton.invalidate();
+        }
     }
 
     private void blur3_invalidateBlur() {
@@ -1460,11 +1523,22 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         }
     }
 
+    private void updateSearchButtonColors() {
+        if (searchButton == null) {
+            return;
+        }
+        searchButton.setColorFilter(getThemedColor(Theme.key_glass_tabUnselected), PorterDuff.Mode.SRC_IN);
+    }
+
     private void blur3_updateColors() {
         blur3_updateFadeColors();
         if (tabsViewBackground != null) {
             tabsViewBackground.updateColors();
         }
+        if (searchButtonBackground != null) {
+            searchButtonBackground.updateColors();
+        }
+        updateSearchButtonColors();
         blur3_invalidateBlur();
         if (fadeView != null) {
             fadeView.invalidate();

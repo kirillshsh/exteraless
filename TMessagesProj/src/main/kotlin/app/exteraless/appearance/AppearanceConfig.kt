@@ -242,6 +242,17 @@ object AppearanceConfig {
         return iosNavigationBarStyle.Bool()
     }
 
+    /** Круглая кнопка поиска справа от нижней панели. В M3-панели места под неё нет. */
+    @JvmField
+    val bottomSearchButton =
+        addConfig("OEAppearanceBottomSearchButton", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun bottomSearchButton(): Boolean {
+        ensureLoaded()
+        return bottomSearchButton.Bool()
+    }
+
     @JvmField
     val iosFirstFolderOnTabTap =
         addConfig("OEAppearanceIosFirstFolderOnTabTap", ConfigItem.configTypeBool, false)

@@ -1221,6 +1221,16 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         return super.onBackPressed(invoked);
     }
 
+    /** Лупа в нижней панели открывает то же поле поиска, что и лупа в шапке. */
+    @Override
+    public boolean onParentSearchClicked() {
+        if (searchItem == null) {
+            return false;
+        }
+        searchItem.openSearch(true);
+        return true;
+    }
+
     public static class SettingCell extends LinearLayout implements Theme.Colorable {
 
         private final Theme.ResourcesProvider resourcesProvider;

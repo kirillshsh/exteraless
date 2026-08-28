@@ -89,6 +89,7 @@
     <string name="OETabletModeOn">On</string>
     <string name="OETabletModeOff">Off</string>
     <string name="OEBottomNavigationBarMode">Bottom Navigation Bar</string>
+    <string name="OEBottomSearchButton">Search Button</string>
     <string name="OEBottomNavigationModeShow">Show</string>
     <string name="OEBottomNavigationModeHide">Hide</string>
     <string name="OEBackAnimation">Back Animation</string>

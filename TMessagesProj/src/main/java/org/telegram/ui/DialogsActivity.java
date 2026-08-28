@@ -3323,12 +3323,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         menu.setTranslationX(-dp(5));
         searchItem = menu.addItem(0, R.drawable.outline_header_search).setIsSearchField(true, false);
         searchItem.setOnClickListener(v -> {
-            showSearch(true, false, true);
-            fragmentSearchFieldWatcher.toggleSearch(true);
-            AndroidUtilities.runOnUIThread(() -> {
-                fragmentSearchField.editText.requestFocus();
-                AndroidUtilities.showKeyboard(fragmentSearchField.editText);
-            }, 100);
+            onParentSearchClicked();
 
             /*
             AnimatorSet animatorSet = new AnimatorSet();
@@ -7692,6 +7687,21 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             return true;
         }
+    }
+
+    /** Лупа в шапке и в нижней панели открывают одно и то же поле поиска. */
+    @Override
+    public boolean onParentSearchClicked() {
+        if (fragmentSearchField == null) {
+            return false;
+        }
+        showSearch(true, false, true);
+        fragmentSearchFieldWatcher.toggleSearch(true);
+        AndroidUtilities.runOnUIThread(() -> {
+            fragmentSearchField.editText.requestFocus();
+            AndroidUtilities.showKeyboard(fragmentSearchField.editText);
+        }, 100);
+        return true;
     }
 
     public void search(String query, boolean animated) {

@@ -96,6 +96,7 @@
     <string name="OEAppearanceGlassMessageMenuInfo">Меню сообщения и панель реакций становятся матовым стеклом.</string>
     <string name="OEAppearanceGlassMessageMenuBlurOff">Стеклянным меню нужно размытие, а оно сейчас выключено.</string>
     <string name="OEBottomNavigationBarMode">Нижняя панель навигации</string>
+    <string name="OEBottomSearchButton">Кнопка поиска</string>
     <string name="OEBottomNavigationModeShow">Показывать</string>
     <string name="OEBottomNavigationModeHide">Скрывать</string>
     <string name="OEBackAnimationInfo">Плавнее переключает экраны и открывает боковое меню.</string>
