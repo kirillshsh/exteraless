@@ -274,6 +274,21 @@ object AppearanceConfig {
     }
 
     /**
+     * Панель ввода разбивается на три острова, как в Telegram iOS: скрепка в круге слева,
+     * поле ввода в короткой пилюле, микрофон/отправка в круге справа. Смайл уезжает вправо
+     * внутрь поля, скрепка больше не прячется при наборе текста.
+     */
+    @JvmField
+    val iosInputPanel =
+        addConfig("OEAppearanceIosInputPanel", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun iosInputPanel(): Boolean {
+        ensureLoaded()
+        return iosInputPanel.Bool()
+    }
+
+    /**
      * Стеклянная капсула вокруг заголовка обжимается по ширине имени вместо того, чтобы
      * тянуться от кнопки «Назад» до меню. Механика уже есть в ActionBar.dispatchDraw, но
      * в обычном чате её не включали — ChatActivity зовёт setChatAvatarContainer только в

@@ -116,6 +116,7 @@
     <string name="OEAppearanceIosDesign" translatable="false">iOS Design</string>
     <string name="OEAppearanceIosNavigationBarStyle">Bottom Navigation Bar</string>
     <string name="OEAppearanceIosBackCounter">iOS-Style Counter</string>
+    <string name="OEAppearanceIosInputPanel">Input Panel</string>
     <string name="OEAppearanceIosFirstFolderOnTabTap">Tab Tap Opens First Folder</string>
     <string name="OEAppearanceCenterChatTitle">Center Chat Title</string>
     <string name="OEAppearanceAdaptiveHeaderBubble">Adaptive Bubble Width</string>

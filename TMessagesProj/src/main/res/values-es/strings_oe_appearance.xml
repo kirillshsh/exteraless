@@ -96,6 +96,7 @@
     <string name="OEAppearanceNewNavigationBarStyle">Barra de navegación inferior</string>
     <string name="OEAppearanceIosNavigationBarStyle">Barra de navegación inferior</string>
     <string name="OEAppearanceIosBackCounter">Contador estilo iOS</string>
+    <string name="OEAppearanceIosInputPanel">Panel de entrada</string>
     <string name="OEAppearanceCenterChatTitle">Centrar título del chat</string>
     <string name="OEAppearanceAdaptiveHeaderBubble">Ancho adaptable de la burbuja</string>
     <string name="OEAppearanceUnreadBackButton">Mostrar contador de no leídos</string>

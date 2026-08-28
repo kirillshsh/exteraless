@@ -118,6 +118,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int iosNavBarRow;
     private int iosFolderTapRow;
     private int iosBackCounterRow;
+    private int iosInputPanelRow;
     private boolean iosExpanded;
     // Скрытие апстримных AI-функций: своя сворачиваемая группа.
     private int hideAiGroupRow;
@@ -226,11 +227,13 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             iosAdaptiveBubbleRow = addRow("adaptiveHeaderBubble");
             iosUnreadBackButtonRow = addRow("unreadBackButton");
             iosBackCounterRow = addRow("iosBackCounter");
+            iosInputPanelRow = addRow("iosInputPanel");
             iosNavBarRow = addRow("iosNavBar");
             iosFolderTapRow = addRow("iosFolderTap");
         } else {
             iosHeaderPreviewRow = iosCenterChatTitleRow = iosAdaptiveBubbleRow = -1;
             iosUnreadBackButtonRow = iosNavBarRow = iosBackCounterRow = iosFolderTapRow = -1;
+            iosInputPanelRow = -1;
         }
         hideAiGroupRow = addRow("hideAi");
         if (hideAiExpanded) {
@@ -540,6 +543,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         } else if (position == iosFolderTapRow) {
             AppearanceConfig.iosFirstFolderOnTabTap.setConfigBool(!AppearanceConfig.iosFirstFolderOnTabTap.Bool());
             rebuildAllAndSelf(view, AppearanceConfig.iosFirstFolderOnTabTap.Bool());
+            return;
+        } else if (position == iosInputPanelRow) {
+            AppearanceConfig.iosInputPanel.setConfigBool(!AppearanceConfig.iosInputPanel.Bool());
+            rebuildAllAndSelf(view, AppearanceConfig.iosInputPanel.Bool());
             return;
         } else if (position == hideAiGroupRow) {
             hideAiExpanded = !hideAiExpanded;
@@ -952,6 +959,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == iosBackCounterRow) {
                         cell.setText(getString(R.string.OEAppearanceIosBackCounter), "",
                                 AppearanceConfig.iosBackCounter.Bool(), true, true);
+                    } else if (position == iosInputPanelRow) {
+                        cell.setText(getString(R.string.OEAppearanceIosInputPanel), "",
+                                AppearanceConfig.iosInputPanel.Bool(), true, true);
                     } else if (position == iosFolderTapRow) {
                         cell.setText(getString(R.string.OEAppearanceIosFirstFolderOnTabTap), "",
                                 AppearanceConfig.iosFirstFolderOnTabTap.Bool(), false, true);
@@ -1083,7 +1093,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == hideAiSummaryRow || position == hideAiIvRow
                     || position == iosNavBarRow || position == iosFolderTapRow
                     || position == iosBackCounterRow || position == iosCenterChatTitleRow
-                    || position == iosAdaptiveBubbleRow || position == iosUnreadBackButtonRow) {
+                    || position == iosAdaptiveBubbleRow || position == iosUnreadBackButtonRow
+                    || position == iosInputPanelRow) {
                 return TYPE_ROUND_CHECK;
             } else if (position == dividerStyleRow || position == glassOutlineRow
                     || position == tabTitleStyleRow
@@ -1150,7 +1161,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         toggleAllMd3Styles();
     }
 
-    private static final int IOS_STYLE_COUNT = 6;
+    private static final int IOS_STYLE_COUNT = 7;
 
     private int iosSelectedCount() {
         int n = 0;
@@ -1160,6 +1171,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         if (AppearanceConfig.iosBackCounter.Bool()) n++;
         if (AppearanceConfig.iosNavigationBarStyle.Bool()) n++;
         if (AppearanceConfig.iosFirstFolderOnTabTap.Bool()) n++;
+        if (AppearanceConfig.iosInputPanel.Bool()) n++;
         return n;
     }
 
@@ -1171,6 +1183,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         AppearanceConfig.iosNavigationBarStyle.setConfigBool(enable);
         AppearanceConfig.iosBackCounter.setConfigBool(enable);
         AppearanceConfig.iosFirstFolderOnTabTap.setConfigBool(enable);
+        AppearanceConfig.iosInputPanel.setConfigBool(enable);
         if (enable) {
             AppearanceConfig.newNavigationBarStyle.setConfigBool(false);
         }

@@ -123,6 +123,7 @@ import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
 import org.telegram.ui.recyclerview.ChatListItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.components.ChatActivityEnterViewStaticIconView;
 
 import org.jetbrains.annotations.NotNull;
@@ -193,6 +194,7 @@ import org.telegram.ui.Components.Premium.PremiumFeatureBottomSheet;
 import org.telegram.ui.Components.Premium.boosts.BoostRepository;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
+import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProvider;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProviderThemed;
 import org.telegram.ui.Components.chat.SendButtonBlockedByTypingView;
 import org.telegram.ui.Components.chat.layouts.ChatActivitySideControlsButtonsLayout;
@@ -278,6 +280,16 @@ public class ChatActivityEnterView extends FrameLayout implements
     protected float attachLayoutPaddingTranslationX;
     private float attachLayoutAlpha = 1f;
     private float attachLayoutPaddingAlpha = 1f;
+
+    /* Панель ввода в стиле iOS: скрепка и микрофон живут в своих круглых островах,
+     * поле ввода — в короткой пилюле между ними. Геометрия в updateIosIslands(). */
+    private final boolean iosPanelAllowed;
+    private boolean iosPanelApplied;
+    private int iosLeftInset, iosRightInset;
+    private BlurredBackgroundDrawableViewFactory glassFactory;
+    private BlurredBackgroundColorProvider glassColorProvider;
+    private BlurredBackgroundDrawable attachIslandDrawable;
+    private BlurredBackgroundDrawable sendIslandDrawable;
     private float messageTextTranslationX;
     private float messageTextPaddingTranslationX;
     private float horizontalPadding = 0;
@@ -2644,6 +2656,9 @@ public class ChatActivityEnterView extends FrameLayout implements
         super(context);
         this.resourcesProvider = resourcesProvider;
         this.isChat = isChat;
+        // Острова iOS живут только в обычном чате: сторис, превью и редактор статей
+        // передают fragment == null и рисуют панель по-своему.
+        this.iosPanelAllowed = fragment != null && isChat;
 
         smoothKeyboard = isChat && !AndroidUtilities.isInMultiwindow && (fragment == null || !fragment.isInBubbleMode());
         dotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -2876,6 +2891,15 @@ public class ChatActivityEnterView extends FrameLayout implements
                 public boolean dispatchTouchEvent(MotionEvent event) {
                     if (getAlpha() < 0.5f) return false;
                     return super.dispatchTouchEvent(event);
+                }
+
+                @Override
+                public void draw(@NonNull Canvas canvas) {
+                    if (iosPanelApplied && iosLeftInset != 0 && attachIslandDrawable != null) {
+                        attachIslandDrawable.setBounds(0, 0, getWidth(), getHeight());
+                        attachIslandDrawable.draw(canvas);
+                    }
+                    super.draw(canvas);
                 }
             };
             attachButton.setScaleType(ImageView.ScaleType.CENTER);
@@ -3281,14 +3305,23 @@ public class ChatActivityEnterView extends FrameLayout implements
             @Override
             protected void dispatchDraw(@NonNull Canvas canvas) {
                 boolean isMenuState = isAudioVideoSendButtonInMenuState();
-                if (!audioVideoButtonContainerForbidden && !isMenuState) {
-                    float s = 1;
-                    if (expandStickersButton != null) {
-                        if (expandStickersButton.getVisibility() == View.VISIBLE) {
-                            s = 1f - expandStickersButton.getAlpha();
-                        }
-                    }
+                float s = 1;
+                if (expandStickersButton != null && expandStickersButton.getVisibility() == View.VISIBLE) {
+                    s = 1f - expandStickersButton.getAlpha();
+                }
 
+                // Правый остров: вместо синего кружка микрофон сидит на стекле, как в iOS.
+                if (iosPanelApplied && iosRightInset != 0 && sendIslandDrawable != null) {
+                    canvas.save();
+                    canvas.scale(s, s, getMeasuredWidth() / 2f, getMeasuredHeight() / 2f);
+                    sendIslandDrawable.setBounds(0, 0, getMeasuredWidth(), getMeasuredHeight());
+                    sendIslandDrawable.draw(canvas);
+                    canvas.restore();
+                    super.dispatchDraw(canvas);
+                    return;
+                }
+
+                if (!audioVideoButtonContainerForbidden && !isMenuState) {
                     final float r = dpf2(19);
                     paint.setColor(getThemedColor(Theme.key_chat_messagePanelSend));
                     final float margin = dpf2(3);
@@ -8004,7 +8037,7 @@ public class ChatActivityEnterView extends FrameLayout implements
     }
 
     private void checkAttachButton(boolean use, int duration) {
-        if (use && app.exteraless.chats.ChatsConfig.keepAttachButton.Bool()) {
+        if (use && (app.exteraless.chats.ChatsConfig.keepAttachButton.Bool() || iosPanelApplied)) {
             use = false;
         }
         int fromRes;
@@ -9140,7 +9173,8 @@ public class ChatActivityEnterView extends FrameLayout implements
                             if (sideButtons != null && (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories)) {
                                 sideButtons.showButton(ChatActivitySideControlsButtonsLayout.BUTTON_ATTACH, false, true);
                             }
-                            if (attachButton != null && (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories)) {
+                            // В iOS-раскладке скрепка живёт в своём острове и при наборе текста не уезжает.
+                            if (attachButton != null && !iosPanelApplied && (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories)) {
                                 animators.add(ObjectAnimator.ofFloat(attachButton, View.ALPHA, attachButtonAlpha = 0.0f));
                                 animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_X, 0.5f));
                                 animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_Y, 0.5f));
@@ -9356,12 +9390,12 @@ public class ChatActivityEnterView extends FrameLayout implements
                             }
                             if (sideButtons != null && (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories)) {
                                 sideButtons.showButton(ChatActivitySideControlsButtonsLayout.BUTTON_ATTACH, captionNearAttach, true);
-                                if (attachButton != null) {
+                                if (attachButton != null && !iosPanelApplied) {
                                     animators.add(ObjectAnimator.ofFloat(attachButton, View.ALPHA, attachButtonAlpha = captionNearAttach ? 0.0f : 1.0f));
                                     animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_X, captionNearAttach ? 0.5f : 1.0f));
                                     animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_Y, captionNearAttach ? 0.5f : 1.0f));
                                 }
-                            } else if (attachButton != null && (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories)) {
+                            } else if (attachButton != null && !iosPanelApplied && (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories)) {
                                 animators.add(ObjectAnimator.ofFloat(attachButton, View.ALPHA, attachButtonAlpha = 0.0f));
                                 animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_X, 0.5f));
                                 animators.add(ObjectAnimator.ofFloat(attachButton, View.SCALE_Y, 0.5f));
@@ -9536,12 +9570,12 @@ public class ChatActivityEnterView extends FrameLayout implements
 
                             if (sideButtons != null) {
                                 sideButtons.showButton(ChatActivitySideControlsButtonsLayout.BUTTON_ATTACH, captionNearAttach, true);
-                                if (attachButton != null) {
+                                if (attachButton != null && !iosPanelApplied) {
                                     attachButton.setAlpha(attachButtonAlpha = captionNearAttach ? 0.0f : 1.0f);
                                     attachButton.setScaleX(captionNearAttach ? 0.5f : 1.0f);
                                     attachButton.setScaleY(captionNearAttach ? 0.5f : 1.0f);
                                 }
-                            } else if (attachButton != null) {
+                            } else if (attachButton != null && !iosPanelApplied) {
                                 attachButton.setAlpha(attachButtonAlpha = 0.0f);
                                 attachButton.setScaleX(0.5f);
                                 attachButton.setScaleY(0.5f);
@@ -10012,13 +10046,17 @@ public class ChatActivityEnterView extends FrameLayout implements
                 layoutParams.rightMargin = dp(50);
             }
         } else {
-            if (scheduledButton != null && scheduledButton.getTag() != null) {
+            if (scheduledButton != null && scheduledButton.getTag() != null || iosPanelApplied) {
+                // В iOS-раскладке в правом слоте пилюли остаётся смайл, место под него нужно всегда.
                 layoutParams.rightMargin = dp(50);
             } else {
                 layoutParams.rightMargin = dp(2);
             }
         }
-        layoutParams.rightMargin = Math.max(layoutParams.rightMargin, Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT)));
+        if (iosRightInset == 0) {
+            // Ширину растущей кнопки отправки уже забрал правый остров — второй раз не вычитаем.
+            layoutParams.rightMargin = Math.max(layoutParams.rightMargin, Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT)));
+        }
         if (doneButton != null && doneButton.getVisibility() == VISIBLE) {
             layoutParams.rightMargin = Math.max(layoutParams.rightMargin, Math.max(0, doneButton.width() - dp(DEFAULT_HEIGHT)));
         }
@@ -10027,9 +10065,10 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
         if (recordedAudioPanel != null) {
             FrameLayout.LayoutParams layoutParams2 = (FrameLayout.LayoutParams) recordedAudioPanel.getLayoutParams();
-            layoutParams2.rightMargin = editingMessageObject == null ? Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT)) : 0;
+            layoutParams2.rightMargin = editingMessageObject == null && iosRightInset == 0 ? Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT)) : 0;
             recordedAudioPanel.setLayoutParams(layoutParams2);
         }
+        updateIosIslands();
     }
 
     public void startMessageTransition() {
@@ -11686,11 +11725,15 @@ public class ChatActivityEnterView extends FrameLayout implements
             return;
         }
         boolean isMenuState = isAudioVideoSendButtonInMenuState();
-        int color = audioVideoButtonContainerForbidden || isMenuState
+        // Под стеклянным островом белая иконка не читается — берём обычный цвет иконок.
+        boolean onGlass = iosPanelApplied && iosRightInset != 0;
+        int color = audioVideoButtonContainerForbidden || isMenuState || onGlass
                 ? getThemedColor(Theme.key_glass_defaultIcon)
                 : Color.WHITE;
         setIconColorFilter(audioVideoSendButton, new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
-        audioVideoButtonContainer.setBackground(isMenuState
+        audioVideoButtonContainer.setBackground(onGlass
+                ? Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), Theme.RIPPLE_MASK_CIRCLE_20DP, dp(DEFAULT_HEIGHT / 2f))
+                : isMenuState
                 ? Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector))
                 : null);
     }
@@ -15835,42 +15878,19 @@ public class ChatActivityEnterView extends FrameLayout implements
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int wasHeight = textFieldContainer.getMeasuredHeight();
+        updateIosIslands();
+        // В iOS-раскладке смайл уехал вправо, поэтому слева тексту нужен только отступ от
+        // края пилюли (либо место под аватар «отправить как» / кнопку бот-меню).
         if (botCommandsMenuButton != null && botCommandsMenuButton.getTag() != null) {
             botCommandsMenuButton.measure(widthMeasureSpec, heightMeasureSpec);
-            ((MarginLayoutParams) emojiButton.getLayoutParams()).leftMargin = dp(10) + (botCommandsMenuButton == null ? 0 : botCommandsMenuButton.getMeasuredWidth());
-            if (deleteRichDraftButton != null) {
-                ((MarginLayoutParams) deleteRichDraftButton.getLayoutParams()).leftMargin = dp(10) + (botCommandsMenuButton == null ? 0 : botCommandsMenuButton.getMeasuredWidth());
-            }
-            if (messageEditText != null) {
-                ((MarginLayoutParams) messageEditText.getLayoutParams()).leftMargin = dp(57) + (botCommandsMenuButton == null ? 0 : botCommandsMenuButton.getMeasuredWidth());
-            }
-            if (richDraftPreview != null) {
-                ((MarginLayoutParams) richDraftPreview.getLayoutParams()).leftMargin = dp(57) + (botCommandsMenuButton == null ? 0 : botCommandsMenuButton.getMeasuredWidth());
-            }
+            final int width = botCommandsMenuButton.getMeasuredWidth();
+            setFieldLeftMargins(dp(10) + width, dp(iosPanelApplied ? 12 : 57) + width);
         } else if (senderSelectView != null && senderSelectView.getVisibility() == View.VISIBLE) {
             int width = senderSelectView.getLayoutParams().width, height = senderSelectView.getLayoutParams().height;
             senderSelectView.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
-            ((MarginLayoutParams) emojiButton.getLayoutParams()).leftMargin = dp(7) + width;
-            if (deleteRichDraftButton != null) {
-                ((MarginLayoutParams) deleteRichDraftButton.getLayoutParams()).leftMargin = dp(7) + width;
-            }
-            if (messageEditText != null) {
-                ((MarginLayoutParams) messageEditText.getLayoutParams()).leftMargin = dp(54) + width;
-            }
-            if (richDraftPreview != null) {
-                ((MarginLayoutParams) richDraftPreview.getLayoutParams()).leftMargin = dp(54) + width;
-            }
+            setFieldLeftMargins(dp(7) + width, dp(iosPanelApplied ? 11 : 54) + width);
         } else {
-            ((MarginLayoutParams) emojiButton.getLayoutParams()).leftMargin = dp(3);
-            if (deleteRichDraftButton != null) {
-                ((MarginLayoutParams) deleteRichDraftButton.getLayoutParams()).leftMargin = dp(3);
-            }
-            if (messageEditText != null) {
-                ((MarginLayoutParams) messageEditText.getLayoutParams()).leftMargin = dp(50);
-            }
-            if (richDraftPreview != null) {
-                ((MarginLayoutParams) richDraftPreview.getLayoutParams()).leftMargin = dp(50);
-            }
+            setFieldLeftMargins(dp(3), dp(iosPanelApplied ? 14 : 50));
         }
         updateBotCommandsMenuContainerTopPadding();
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
@@ -15907,6 +15927,20 @@ public class ChatActivityEnterView extends FrameLayout implements
                     .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(420)
                     .start();
             }
+        }
+    }
+
+    /** Левый отступ под кнопки у края поля и левый отступ под сам текст. */
+    private void setFieldLeftMargins(int buttonsLeft, int textLeft) {
+        ((MarginLayoutParams) emojiButton.getLayoutParams()).leftMargin = buttonsLeft;
+        if (deleteRichDraftButton != null) {
+            ((MarginLayoutParams) deleteRichDraftButton.getLayoutParams()).leftMargin = buttonsLeft;
+        }
+        if (messageEditText != null) {
+            ((MarginLayoutParams) messageEditText.getLayoutParams()).leftMargin = textLeft;
+        }
+        if (richDraftPreview != null) {
+            ((MarginLayoutParams) richDraftPreview.getLayoutParams()).leftMargin = textLeft;
         }
     }
 
@@ -16120,9 +16154,116 @@ public class ChatActivityEnterView extends FrameLayout implements
 
     private void updateAttachButtonTranslationX() {
         if (attachButton == null) return;
-        attachButton.setTranslationX(attachLayoutPaddingTranslationX + attachLayoutTranslationX + (sendButton != null ? (
+        // В iOS-раскладке скрепка стоит слева, вне пилюли, и растущая кнопка отправки её не двигает.
+        attachButton.setTranslationX(attachLayoutPaddingTranslationX + attachLayoutTranslationX + (sendButton != null && !iosPanelApplied ? (
             -Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT + 12)) * sendButton.getAlpha()
         ) : 0));
+    }
+
+    /* Панель ввода в стиле iOS: круг со скрепкой слева, пилюля, круг с микрофоном справа. */
+
+    /** Круг 44dp плюс зазор 10dp — те же числа, что у круглых кнопок канала. */
+    public static final int ISLAND_SLOT = DEFAULT_HEIGHT + 10;
+
+    public void setGlassFactory(BlurredBackgroundDrawableViewFactory factory, BlurredBackgroundColorProvider colorProvider) {
+        glassFactory = factory;
+        glassColorProvider = colorProvider;
+        // Раскладку переключаем один раз, при сборке чата: перекладывать вьюхи посреди
+        // измерения нельзя, поэтому смена настройки применяется при следующем входе в чат.
+        iosPanelApplied = iosPanelAllowed && AppearanceConfig.iosInputPanel();
+        if (iosPanelApplied) {
+            applyIosPanelLayout();
+        }
+        updateIosIslands();
+    }
+
+    /** Стекло под островами появляется, только когда раскладка включена и фабрика уже пришла. */
+    private void ensureIslandDrawables() {
+        if (!iosPanelApplied || glassFactory == null) {
+            return;
+        }
+        if (attachIslandDrawable == null && attachButton != null) {
+            attachIslandDrawable = createIslandDrawable(attachButton);
+        }
+        if (sendIslandDrawable == null && audioVideoButtonContainer != null) {
+            sendIslandDrawable = createIslandDrawable(audioVideoButtonContainer);
+        }
+    }
+
+    public int getIosOffsetLeft() {
+        return iosLeftInset;
+    }
+
+    public int getIosOffsetRight() {
+        return iosRightInset;
+    }
+
+    /** Сообщает ChatActivity, что пилюлю пора укоротить или вернуть на всю ширину. */
+    protected void onIosIslandsChanged() {
+    }
+
+    private BlurredBackgroundDrawable createIslandDrawable(View view) {
+        if (glassFactory == null) {
+            return null;
+        }
+        final BlurredBackgroundDrawable drawable = glassFactory.create(view, glassColorProvider);
+        drawable.setRadius(dp(DEFAULT_HEIGHT / 2f));
+        return drawable;
+    }
+
+    private void updateIosIslands() {
+        if (sendButtonContainer == null || messageEditTextContainer == null) {
+            return;
+        }
+        int left = 0, right = 0;
+        if (iosPanelApplied && editingMessageObject == null && !recordingAudioVideo) {
+            if (attachButton != null) {
+                left = dp(ISLAND_SLOT);
+            }
+            // Кнопка слоумода 74dp в круг не влезает — при ней правый остров выключается.
+            if (sendButtonContainer.getVisibility() == VISIBLE
+                    && (slowModeButton == null || slowModeButton.getVisibility() != VISIBLE)) {
+                right = dp(ISLAND_SLOT) + Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT));
+            }
+        }
+
+        if (left == iosLeftInset && right == iosRightInset) {
+            return;
+        }
+        iosLeftInset = left;
+        iosRightInset = right;
+        updateAudioVideoSendButtonColor();
+
+        final MarginLayoutParams lp = (MarginLayoutParams) messageEditTextContainer.getLayoutParams();
+        lp.leftMargin = left;
+        lp.rightMargin = right != 0 ? right : dp(DEFAULT_HEIGHT);
+        messageEditTextContainer.setLayoutParams(lp);
+        onIosIslandsChanged();
+    }
+
+    /** Разовая перестановка кнопок под острова: смайл вправо, скрепка влево. */
+    private void applyIosPanelLayout() {
+        for (int i = 0; i < 2; i++) {
+            final View view = i == 0 ? emojiButton : deleteRichDraftButton;
+            if (view == null) {
+                continue;
+            }
+            final FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) view.getLayoutParams();
+            lp.gravity = Gravity.BOTTOM | Gravity.RIGHT;
+            lp.leftMargin = 0;
+        }
+        if (attachButton != null) {
+            // Скрепка переезжает к textFieldContainer: за границами своего родителя вью
+            // рисуется (clipChildren=false), но тачи туда уже не доходят.
+            AndroidUtilities.removeFromParent(attachButton);
+            textFieldContainer.addView(attachButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT,
+                Gravity.BOTTOM | Gravity.LEFT));
+            attachButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector),
+                Theme.RIPPLE_MASK_CIRCLE_20DP, dp(DEFAULT_HEIGHT / 2f)));
+        }
+        ensureIslandDrawables();
+        updateAttachButtonTranslationX();
+        requestLayout();
     }
 
     private void updateEmojiButtonParams() {

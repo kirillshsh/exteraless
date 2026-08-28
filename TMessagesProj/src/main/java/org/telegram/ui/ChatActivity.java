@@ -8458,6 +8458,11 @@ public class ChatActivity extends BaseFragment implements
             int messageEditTextPredrawScrollY;
 
             @Override
+            protected void onIosIslandsChanged() {
+                checkUi_inputBubbleOffsets();
+            }
+
+            @Override
             protected void onChangedIslandTotalHeight(float h) {
                 checkUi_inputIslandHeight();
             }
@@ -8705,6 +8710,7 @@ public class ChatActivity extends BaseFragment implements
         chatActivityEnterView.setMinimumHeight(AndroidUtilities.dp(51));
         chatActivityEnterView.setAllowStickersAndGifs(true, true, currentEncryptedChat == null || AndroidUtilities.getPeerLayerVersion(currentEncryptedChat.layer) >= 46);
         chatActivityEnterView.shouldDrawBackground = false;
+        chatActivityEnterView.setGlassFactory(glassBackgroundDrawableFactory, blurredBackgroundColorProvider);
         if (textToSet != null) {
             chatActivityEnterView.setFieldText(textToSet);
             textToSet = null;
@@ -9095,7 +9101,9 @@ public class ChatActivity extends BaseFragment implements
             }
         });
         bottomChannelButtonsLayout.setOnButtonsTotalWidthChanged((l, r) -> {
-            chatInputViewsContainer.setInputBubbleOffsets(l, r);
+            channelButtonsOffsetLeft = l;
+            channelButtonsOffsetRight = r;
+            checkUi_inputBubbleOffsets();
         });
 
         chatInputBubbleContainer.addView(bottomChannelButtonsLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 56, Gravity.BOTTOM, 0, 0, 0, (44 - 56) / 2));
@@ -50734,6 +50742,29 @@ public class ChatActivity extends BaseFragment implements
         }
     }
 
+    private float channelButtonsOffsetLeft, channelButtonsOffsetRight;
+
+    /**
+     * Пилюлю по краям обрезают либо круглые кнопки канала, либо острова iOS-панели ввода.
+     * Оба источника сходятся здесь: кнопки канала шлют свою ширину на каждом проходе вёрстки,
+     * даже когда сами не видны, и без общей точки затирали бы отступы островов.
+     */
+    private void checkUi_inputBubbleOffsets() {
+        if (chatInputViewsContainer == null) {
+            return;
+        }
+        float iosLeft = 0, iosRight = 0;
+        if (chatActivityEnterView != null) {
+            // Множитель даёт бесплатную анимацию: при подмене панели острова тают вместе с ней.
+            final float factor = bottomViewsVisibilityController.getVisibility(MESSAGE_INPUT_CONTAINER);
+            iosLeft = chatActivityEnterView.getIosOffsetLeft() * factor;
+            iosRight = chatActivityEnterView.getIosOffsetRight() * factor;
+        }
+        chatInputViewsContainer.setInputBubbleOffsets(
+            Math.max(channelButtonsOffsetLeft, iosLeft),
+            Math.max(channelButtonsOffsetRight, iosRight));
+    }
+
     private float inputIslandHeightCurrent;
     private float inputIslandHeightTarget;
 
@@ -50750,6 +50781,7 @@ public class ChatActivity extends BaseFragment implements
         inputIslandHeightTarget = calculateInputIslandHeight(true);
 
         chatInputViewsContainer.setInputBubbleHeight(inputIslandHeightCurrent);
+        checkUi_inputBubbleOffsets();
         updatePagedownButtonsPosition();
         updateBotforumTabsBottomMargin();
         checkUi_botMenuPosition();
@@ -51053,6 +51085,7 @@ public class ChatActivity extends BaseFragment implements
         if (chatInputViewsContainer != null) {
             chatInputViewsContainer.setInputBubbleAlpha((int) (255 * (1f - hideFactor)));
             chatInputViewsContainer.setInputBubbleTranslationY(dp(54) * hideFactor);
+            checkUi_inputBubbleOffsets();
         }
 
 

@@ -96,6 +96,7 @@
     <string name="OEAppearanceNewNavigationBarStyle">底部导航栏</string>
     <string name="OEAppearanceIosNavigationBarStyle">底部导航栏</string>
     <string name="OEAppearanceIosBackCounter">iOS 风格计数</string>
+    <string name="OEAppearanceIosInputPanel">输入面板</string>
     <string name="OEAppearanceCenterChatTitle">居中聊天标题</string>
     <string name="OEAppearanceAdaptiveHeaderBubble">气泡宽度自适应</string>
     <string name="OEAppearanceUnreadBackButton">显示未读计数</string>

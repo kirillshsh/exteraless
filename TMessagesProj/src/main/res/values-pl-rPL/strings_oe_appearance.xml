@@ -96,6 +96,7 @@
     <string name="OEAppearanceNewNavigationBarStyle">Dolny pasek nawigacji</string>
     <string name="OEAppearanceIosNavigationBarStyle">Dolny pasek nawigacji</string>
     <string name="OEAppearanceIosBackCounter">Licznik w stylu iOS</string>
+    <string name="OEAppearanceIosInputPanel">Panel wprowadzania</string>
     <string name="OEAppearanceCenterChatTitle">Wyśrodkuj tytuł czatu</string>
     <string name="OEAppearanceAdaptiveHeaderBubble">Adaptacyjna szerokość dymka</string>
     <string name="OEAppearanceUnreadBackButton">Pokaż licznik nieprzeczytanych</string>
