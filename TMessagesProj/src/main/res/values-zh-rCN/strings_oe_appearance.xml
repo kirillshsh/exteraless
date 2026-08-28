@@ -95,7 +95,10 @@
     <string name="OEAppearanceNewChatHeaderStyle">对话顶栏</string>
     <string name="OEAppearanceNewNavigationBarStyle">底部导航栏</string>
     <string name="OEAppearanceIosNavigationBarStyle">底部导航栏</string>
-    <string name="OEAppearanceIosBackCounter">返回箭头旁显示未读数</string>
+    <string name="OEAppearanceIosBackCounter">iOS 风格计数</string>
+    <string name="OEAppearanceCenterChatTitle">居中聊天标题</string>
+    <string name="OEAppearanceAdaptiveHeaderBubble">气泡宽度自适应</string>
+    <string name="OEAppearanceUnreadBackButton">显示未读计数</string>
     <string name="OEAppearanceIosFirstFolderOnTabTap">点按标签页返回首个文件夹</string>
     <string name="OEAppearanceHideAi">隐藏 AI</string>
     <string name="OEAppearanceHideAiEditor">AI 编辑按钮</string>

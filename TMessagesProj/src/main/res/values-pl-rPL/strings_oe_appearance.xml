@@ -95,7 +95,10 @@
     <string name="OEAppearanceNewChatHeaderStyle">Nagłówek czatu</string>
     <string name="OEAppearanceNewNavigationBarStyle">Dolny pasek nawigacji</string>
     <string name="OEAppearanceIosNavigationBarStyle">Dolny pasek nawigacji</string>
-    <string name="OEAppearanceIosBackCounter">Licznik obok strzałki wstecz</string>
+    <string name="OEAppearanceIosBackCounter">Licznik w stylu iOS</string>
+    <string name="OEAppearanceCenterChatTitle">Wyśrodkuj tytuł czatu</string>
+    <string name="OEAppearanceAdaptiveHeaderBubble">Adaptacyjna szerokość dymka</string>
+    <string name="OEAppearanceUnreadBackButton">Pokaż licznik nieprzeczytanych</string>
     <string name="OEAppearanceIosFirstFolderOnTabTap">Dotknięcie karty otwiera pierwszy folder</string>
     <string name="OEAppearanceHideAi">Ukryj AI</string>
     <string name="OEAppearanceHideAiEditor">Przycisk edytora AI</string>

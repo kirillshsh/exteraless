@@ -48,6 +48,26 @@ public abstract class LegacyDefaults {
         editor.apply();
     }
 
+    private static final String IOS_BACK_COUNTER_MARKER = "OEIosBackCounterMigrated";
+
+    /**
+     * Раньше ActionBar.unreadBadgeSetCount показывал счётчик, если включён любой из двух флагов.
+     * Теперь unreadBadgeOnBackButton — мастер, а iosBackCounter — только стиль, поэтому у тех,
+     * у кого стоял один iosBackCounter, счётчик бы пропал. Свой маркер, а не MARKER из pin():
+     * у существующих установок тот уже выставлен и pin() выходит по раннему return.
+     */
+    public static void migrateIosBackCounter(SharedPreferences preferences) {
+        if (preferences == null || preferences.getBoolean(IOS_BACK_COUNTER_MARKER, false)) {
+            return;
+        }
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putBoolean(IOS_BACK_COUNTER_MARKER, true);
+        if (preferences.getBoolean("OEAppearanceIosBackCounter", false)) {
+            editor.putBoolean("unreadBadgeOnBackButton", true);
+        }
+        editor.apply();
+    }
+
     private static boolean installedBeforeThisBuild() {
         try {
             PackageInfo info = ApplicationLoader.applicationContext.getPackageManager()

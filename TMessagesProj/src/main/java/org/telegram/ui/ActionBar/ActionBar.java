@@ -2474,11 +2474,19 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     }
 
     public void unreadBadgeSetCount(int count) {
-        final boolean iosCounter = app.exteraless.appearance.AppearanceConfig.iosBackCounter();
-        if (backButtonImageView == null || !(NekoConfig.unreadBadgeOnBackButton.Bool() || iosCounter)) {
+        // unreadBadgeOnBackButton — мастер («показывать ли счётчик»), iosBackCounter — только стиль.
+        // Раньше флаги были связаны через ||, и iOS-счётчик показывался при выключенном мастере;
+        // старые установки с таким сочетанием чинит LegacyDefaults.migrateIosBackCounter.
+        if (backButtonImageView == null) {
             return;
         }
-        if (iosCounter) {
+        if (!NekoConfig.unreadBadgeOnBackButton.Bool()) {
+            // Гасим, а не выходим: превью в настройках переключает флаг на живой вьюхе.
+            setInlineUnreadCount(0);
+            backButtonImageView.setUnread(0);
+            return;
+        }
+        if (app.exteraless.appearance.AppearanceConfig.iosBackCounter()) {
             setInlineUnreadCount(count);
             backButtonImageView.setUnread(0);
         } else {

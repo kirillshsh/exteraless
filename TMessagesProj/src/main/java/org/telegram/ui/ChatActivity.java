@@ -5185,6 +5185,15 @@ public class ChatActivity extends BaseFragment implements
         //actionBar.setChatAvatarContainer(avatarContainer);
         //avatarContainer.setActionBar(actionBar);
 
+        if (app.exteraless.appearance.AppearanceConfig.adaptiveHeaderBubble()
+                && avatarContainer.getParent() != null
+                && chatMode != MODE_PINNED && chatMode != MODE_WELCOME_MESSAGES && !isComments) {
+            // Капсулу по ширине заголовка ActionBar умеет рисовать давно, но в обычном чате
+            // контейнер ей не отдавали — отсюда две закомментированные строки выше.
+            actionBar.setChatAvatarContainer(avatarContainer);
+            avatarContainer.setActionBar(actionBar);
+        }
+
         if (chatMode == MODE_PINNED) {
             actionBar.setChatAvatarContainer(avatarContainer);
             avatarContainer.setActionBar(actionBar);
@@ -50570,10 +50579,7 @@ public class ChatActivity extends BaseFragment implements
     }
 
     private boolean canShowCenteredTitle(ChatActivity parentFragment) {
-        if (!NaConfig.INSTANCE.getCenterActionBarTitle().Bool()) {
-            return false;
-        }
-        if (NaConfig.INSTANCE.getCenterActionBarTitleType().Int() == 2) {
+        if (!app.exteraless.appearance.ChatHeaderUiHelper.isChatTitleCentered()) {
             return false;
         }
         if (parentFragment == null) {

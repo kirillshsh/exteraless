@@ -273,6 +273,22 @@ object AppearanceConfig {
         return iosBackCounter.Bool()
     }
 
+    /**
+     * Стеклянная капсула вокруг заголовка обжимается по ширине имени вместо того, чтобы
+     * тянуться от кнопки «Назад» до меню. Механика уже есть в ActionBar.dispatchDraw, но
+     * в обычном чате её не включали — ChatActivity зовёт setChatAvatarContainer только в
+     * закреплённых, приветственных сообщениях и комментариях. Дефолт false = прежний вид.
+     */
+    @JvmField
+    val adaptiveHeaderBubble =
+        addConfig("OEAppearanceAdaptiveHeaderBubble", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun adaptiveHeaderBubble(): Boolean {
+        ensureLoaded()
+        return adaptiveHeaderBubble.Bool()
+    }
+
     // ---- AI-функции Telegram ----
 
     /** Прячет кнопку AI-редактора в поле ввода, вложениях и подписи к медиа. */

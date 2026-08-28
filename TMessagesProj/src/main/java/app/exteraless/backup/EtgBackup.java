@@ -337,6 +337,8 @@ public final class EtgBackup {
         bool(list, "bottomSearchButton", AppearanceConfig.bottomSearchButton);
         bool(list, "iosFirstFolderOnTabTap", AppearanceConfig.iosFirstFolderOnTabTap);
         bool(list, "iosBackCounter", AppearanceConfig.iosBackCounter);
+        bool(list, "adaptiveHeaderBubble", AppearanceConfig.adaptiveHeaderBubble);
+        bool(list, "unreadBadgeOnBackButton", NekoConfig.unreadBadgeOnBackButton);
         bool(list, "useSystemFonts", NekoConfig.typeface);
         bool(list, "gooeyAvatarAnimation", AppearanceConfig.gooeyAvatarAnimation);
         bool(list, "customThemes", AppearanceConfig.customThemes);

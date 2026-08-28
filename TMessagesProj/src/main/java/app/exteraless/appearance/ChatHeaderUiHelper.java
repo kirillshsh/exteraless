@@ -23,6 +23,15 @@ public final class ChatHeaderUiHelper {
         return AppearanceConfig.newChatHeaderStyle();
     }
 
+    /**
+     * Настроечная часть центровки заголовка чата — фича NagramX. Экранные условия
+     * (тред, репорт, режим чата) остаются в {@code ChatActivity.canShowCenteredTitle}.
+     */
+    public static boolean isChatTitleCentered() {
+        return xyz.nextalone.nagram.NaConfig.INSTANCE.getCenterActionBarTitle().Bool()
+                && xyz.nextalone.nagram.NaConfig.INSTANCE.getCenterActionBarTitleType().Int() != 2;
+    }
+
     /** Назад ? 4 : (m3 ? 57 : 52). */
     public static int getAvatarContainerLeftMargin(boolean withBackButton) {
         if (withBackButton) {

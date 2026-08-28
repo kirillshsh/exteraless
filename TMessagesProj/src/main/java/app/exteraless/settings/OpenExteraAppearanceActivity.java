@@ -29,6 +29,8 @@ import org.telegram.ui.LaunchActivity;
 import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.appearance.AvatarCornersPreviewCell;
 import app.exteraless.appearance.AvatarCornersSeekBar;
+import app.exteraless.appearance.ChatHeaderPreviewCell;
+import app.exteraless.appearance.ChatHeaderUiHelper;
 import app.exteraless.appearance.ChatListPreviewCell;
 import app.exteraless.appearance.FabShapeCell;
 import app.exteraless.appearance.FoldersPreviewCell;
@@ -62,6 +64,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private static final int TYPE_ROUND_CHECK = 105;
     /** Две карточки-превью формы плавающей кнопки. */
     private static final int TYPE_FAB_SHAPE = 106;
+    /** Превью шапки открытого чата внутри группы «iOS Design». */
+    private static final int TYPE_CHAT_HEADER = 107;
 
     // Appearance
     private int appearanceHeaderRow;
@@ -107,6 +111,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3NavBarRow;
     private boolean md3Expanded;
     private int iosGroupRow;
+    private int iosHeaderPreviewRow;
+    private int iosCenterChatTitleRow;
+    private int iosAdaptiveBubbleRow;
+    private int iosUnreadBackButtonRow;
     private int iosNavBarRow;
     private int iosFolderTapRow;
     private int iosBackCounterRow;
@@ -142,6 +150,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private ChatListPreviewCell chatListPreviewCell;
     private FoldersPreviewCell foldersPreviewCell;
     private FabShapeCell fabShapeCell;
+    private ChatHeaderPreviewCell chatHeaderPreviewCell;
 
     /**
      * Отложенный rebuild после слайдера радиуса секций. exteraGram
@@ -212,11 +221,16 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         }
         iosGroupRow = addRow("iosStyles");
         if (iosExpanded) {
-            iosNavBarRow = addRow("iosNavBar");
+            iosHeaderPreviewRow = addRow("iosHeaderPreview");
+            iosCenterChatTitleRow = addRow("centerChatTitle");
+            iosAdaptiveBubbleRow = addRow("adaptiveHeaderBubble");
+            iosUnreadBackButtonRow = addRow("unreadBackButton");
             iosBackCounterRow = addRow("iosBackCounter");
+            iosNavBarRow = addRow("iosNavBar");
             iosFolderTapRow = addRow("iosFolderTap");
         } else {
-            iosNavBarRow = iosBackCounterRow = iosFolderTapRow = -1;
+            iosHeaderPreviewRow = iosCenterChatTitleRow = iosAdaptiveBubbleRow = -1;
+            iosUnreadBackButtonRow = iosNavBarRow = iosBackCounterRow = iosFolderTapRow = -1;
         }
         hideAiGroupRow = addRow("hideAi");
         if (hideAiExpanded) {
@@ -436,6 +450,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         if (chatListPreviewCell != null) chatListPreviewCell.invalidate();
         if (foldersPreviewCell != null) foldersPreviewCell.invalidate();
         if (fabShapeCell != null) fabShapeCell.invalidate();
+        if (chatHeaderPreviewCell != null) chatHeaderPreviewCell.invalidate();
     }
 
     @Override
@@ -489,6 +504,21 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             iosExpanded = !iosExpanded;
             rebuildRowsAndNotify();
             return;
+        } else if (position == iosCenterChatTitleRow) {
+            setChatTitleCentered(!ChatHeaderUiHelper.isChatTitleCentered());
+            updateChatHeaderPreview();
+            rebuildAllAndSelf(view, ChatHeaderUiHelper.isChatTitleCentered());
+            return;
+        } else if (position == iosAdaptiveBubbleRow) {
+            AppearanceConfig.adaptiveHeaderBubble.setConfigBool(!AppearanceConfig.adaptiveHeaderBubble.Bool());
+            updateChatHeaderPreview();
+            rebuildAllAndSelf(view, AppearanceConfig.adaptiveHeaderBubble.Bool());
+            return;
+        } else if (position == iosUnreadBackButtonRow) {
+            NekoConfig.unreadBadgeOnBackButton.setConfigBool(!NekoConfig.unreadBadgeOnBackButton.Bool());
+            updateChatHeaderPreview();
+            rebuildAllAndSelf(view, NekoConfig.unreadBadgeOnBackButton.Bool());
+            return;
         } else if (position == iosNavBarRow) {
             boolean enable = !AppearanceConfig.iosNavigationBarStyle.Bool();
             AppearanceConfig.iosNavigationBarStyle.setConfigBool(enable);
@@ -498,8 +528,14 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             rebuildAllAndSelf(view, enable);
             return;
         } else if (position == iosBackCounterRow) {
-            AppearanceConfig.iosBackCounter.setConfigBool(!AppearanceConfig.iosBackCounter.Bool());
-            rebuildAllAndSelf(view, AppearanceConfig.iosBackCounter.Bool());
+            boolean enable = !AppearanceConfig.iosBackCounter.Bool();
+            AppearanceConfig.iosBackCounter.setConfigBool(enable);
+            if (enable) {
+                // Без мастер-тумблера стиль ни на что не влияет.
+                NekoConfig.unreadBadgeOnBackButton.setConfigBool(true);
+            }
+            updateChatHeaderPreview();
+            rebuildAllAndSelf(view, enable);
             return;
         } else if (position == iosFolderTapRow) {
             AppearanceConfig.iosFirstFolderOnTabTap.setConfigBool(!AppearanceConfig.iosFirstFolderOnTabTap.Bool());
@@ -753,6 +789,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     foldersPreviewCell = new FoldersPreviewCell(mContext, resourcesProvider);
                     view = foldersPreviewCell;
                     break;
+                case TYPE_CHAT_HEADER:
+                    chatHeaderPreviewCell = new ChatHeaderPreviewCell(mContext,
+                            OpenExteraAppearanceActivity.this);
+                    view = chatHeaderPreviewCell;
+                    break;
                 case TYPE_FAB_SHAPE:
                     fabShapeCell = new FabShapeCell(mContext,
                             OpenExteraAppearanceActivity.this::rebuildAll);
@@ -896,6 +937,15 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == md3NavBarRow) {
                         cell.setText(getString(R.string.OEAppearanceNewNavigationBarStyle), "",
                                 AppearanceConfig.newNavigationBarStyle.Bool(), false, true);
+                    } else if (position == iosCenterChatTitleRow) {
+                        cell.setText(getString(R.string.OEAppearanceCenterChatTitle), "",
+                                ChatHeaderUiHelper.isChatTitleCentered(), true, true);
+                    } else if (position == iosAdaptiveBubbleRow) {
+                        cell.setText(getString(R.string.OEAppearanceAdaptiveHeaderBubble), "",
+                                AppearanceConfig.adaptiveHeaderBubble.Bool(), true, true);
+                    } else if (position == iosUnreadBackButtonRow) {
+                        cell.setText(getString(R.string.OEAppearanceUnreadBackButton), "",
+                                NekoConfig.unreadBadgeOnBackButton.Bool(), true, true);
                     } else if (position == iosNavBarRow) {
                         cell.setText(getString(R.string.OEAppearanceIosNavigationBarStyle), "",
                                 AppearanceConfig.iosNavigationBarStyle.Bool(), true, true);
@@ -1006,6 +1056,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_CHAT_LIST;
             } else if (position == foldersPreviewRow) {
                 return TYPE_FOLDERS;
+            } else if (position == iosHeaderPreviewRow) {
+                return TYPE_CHAT_HEADER;
             } else if (position == sectionRadiusRow) {
                 return TYPE_SECTION_SLIDER;
             } else if (position == appearanceHeaderRow || position == sectionsHeaderRow
@@ -1030,7 +1082,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == md3NavBarRow || position == hideAiEditorRow
                     || position == hideAiSummaryRow || position == hideAiIvRow
                     || position == iosNavBarRow || position == iosFolderTapRow
-                    || position == iosBackCounterRow) {
+                    || position == iosBackCounterRow || position == iosCenterChatTitleRow
+                    || position == iosAdaptiveBubbleRow || position == iosUnreadBackButtonRow) {
                 return TYPE_ROUND_CHECK;
             } else if (position == dividerStyleRow || position == glassOutlineRow
                     || position == tabTitleStyleRow
@@ -1097,26 +1150,60 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         toggleAllMd3Styles();
     }
 
-    private static final int IOS_STYLE_COUNT = 3;
+    private static final int IOS_STYLE_COUNT = 6;
 
     private int iosSelectedCount() {
         int n = 0;
-        if (AppearanceConfig.iosNavigationBarStyle.Bool()) n++;
+        if (ChatHeaderUiHelper.isChatTitleCentered()) n++;
+        if (AppearanceConfig.adaptiveHeaderBubble.Bool()) n++;
+        if (NekoConfig.unreadBadgeOnBackButton.Bool()) n++;
         if (AppearanceConfig.iosBackCounter.Bool()) n++;
+        if (AppearanceConfig.iosNavigationBarStyle.Bool()) n++;
         if (AppearanceConfig.iosFirstFolderOnTabTap.Bool()) n++;
         return n;
     }
 
     private void toggleAllIosStyles() {
         boolean enable = iosSelectedCount() == 0;
+        setChatTitleCentered(enable);
+        AppearanceConfig.adaptiveHeaderBubble.setConfigBool(enable);
+        NekoConfig.unreadBadgeOnBackButton.setConfigBool(enable);
         AppearanceConfig.iosNavigationBarStyle.setConfigBool(enable);
         AppearanceConfig.iosBackCounter.setConfigBool(enable);
         AppearanceConfig.iosFirstFolderOnTabTap.setConfigBool(enable);
         if (enable) {
             AppearanceConfig.newNavigationBarStyle.setConfigBool(false);
         }
+        updateChatHeaderPreview();
         rebuildAll();
         rebuildRowsAndNotify();
+    }
+
+    private void updateChatHeaderPreview() {
+        if (chatHeaderPreviewCell != null) {
+            chatHeaderPreviewCell.update();
+        }
+    }
+
+    /**
+     * Центровка заголовка чата — фича NagramX с четырьмя режимами
+     * (0 выкл, 1 везде, 2 только настройки, 3 только чаты). Здесь она показана простой
+     * галочкой, поэтому режим досчитывается так, чтобы не сломать центровку остальных
+     * экранов: включение к «только настройкам» даёт «везде», выключение из «везде» —
+     * «только настройки».
+     */
+    private void setChatTitleCentered(boolean enable) {
+        final tw.nekomimi.nekogram.config.ConfigItem type = NaConfig.INSTANCE.getCenterActionBarTitleType();
+        final int current = type.Int();
+        if (enable) {
+            type.setConfigInt(current == 1 || current == 2 ? 1 : 3);
+            NaConfig.INSTANCE.getCenterActionBarTitle().setConfigBool(true);
+        } else if (current == 1) {
+            type.setConfigInt(2);
+        } else {
+            type.setConfigInt(0);
+            NaConfig.INSTANCE.getCenterActionBarTitle().setConfigBool(false);
+        }
     }
 
     private void toggleAllMd3Styles() {

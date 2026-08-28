@@ -229,6 +229,7 @@ public class NekoConfig {
                 return;
             }
             app.exteraless.config.LegacyDefaults.pin(getPreferences());
+            app.exteraless.config.LegacyDefaults.migrateIosBackCounter(getPreferences());
             for (int i = 0; i < configs.size(); i++) {
                 ConfigItem o = configs.get(i);
 
